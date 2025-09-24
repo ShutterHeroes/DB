@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres        # 사용자 이름
+      POSTGRES_PASSWORD: 8033  # 비밀번호
+      POSTGRES_DB: mydatabase        # 기본 생성할 DB
+    ports:
+      - "5433:5432"                  # 로컬 5433 → 컨테이너 5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # 데이터 영구 저장
+
+volumes:
+  postgres_data:
