@@ -1,17 +1,24 @@
 version: "3.9"
 services:
   db:
-    image: postgres:15
+    image: postgis/postgis:15-3.4      # Postgres15 + PostGIS3.4
     container_name: postgres_db
     restart: always
     environment:
-      POSTGRES_USER: postgres        # 사용자 이름
-      POSTGRES_PASSWORD: 8033  # 비밀번호
-      POSTGRES_DB: mydatabase        # 기본 생성할 DB
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "8033"
+      POSTGRES_DB: mydatabase
+      TZ: "Asia/Seoul"
     ports:
-      - "5433:5432"                  # 로컬 5433 → 컨테이너 5432
+      - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data  # 데이터 영구 저장
+      - ./postgres_data:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro   # ✅ 최초 생성 시 자동 실행
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
