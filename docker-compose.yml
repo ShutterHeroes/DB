@@ -1,7 +1,6 @@
-version: "3.9"
 services:
   db:
-    image: postgis/postgis:15-3.4      # Postgres15 + PostGIS3.4
+    image: postgis/postgis:15-3.4
     container_name: postgres_db
     restart: always
     environment:
@@ -13,12 +12,27 @@ services:
       - "5433:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
-      - ./initdb:/docker-entrypoint-initdb.d:ro   # ✅ 최초 생성 시 자동 실행
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB || exit 1"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 12
+      start_period: 20s   # ← 초기 기동 유예
 
-volumes:
-  postgres_data:
+  migrator:
+    image: postgis/postgis:15-3.4
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      PGPASSWORD: "8033"
+      PGHOST: "db"
+      PGPORT: "5432"
+      PGUSER: "postgres"
+      PGDATABASE: "mydatabase"
+      RUN_SEED: "true"
+    volumes:
+      - ./migrations:/migrations:ro
+      - ./scripts:/scripts:ro
+    entrypoint: ["/bin/sh","/scripts/migrate.sh"]
