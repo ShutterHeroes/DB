@@ -1,6 +1,6 @@
- services:
+services:
   db:
-    image: postgis/postgis:15-3.4   # Postgres 15 + PostGIS 3.4
+    image: postgis/postgis:15-3.4
     container_name: postgres_db
     restart: always
     environment:
@@ -11,41 +11,28 @@
     ports:
       - "5433:5432"
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data   # ← 데이터 보존
+      - ./postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB || exit 1"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 12
+      start_period: 20s   # ← 초기 기동 유예
 
   migrator:
-    image: postgis/postgis:15-3.4   # psql 클라이언트도 포함되어 있음
+    image: postgis/postgis:15-3.4
     depends_on:
       db:
-        condition: service_healthy  # DB 준비되면 실행
-    restart: "no"                   # 끝나면 꺼져야 함 (재시작 X)
+        condition: service_healthy
+    restart: "no"
     environment:
       PGPASSWORD: "8033"
-      RUN_SEED: "true"              # 개발 환경이면 true, 운영은 false 권장
+      PGHOST: "db"
+      PGPORT: "5432"
+      PGUSER: "postgres"
+      PGDATABASE: "mydatabase"
+      RUN_SEED: "true"
     volumes:
-      - ./migrations:/migrations:ro # SQL 파일들을 읽기 전용으로 마운트
-    entrypoint: ["/bin/sh","-c"]
-    command: >
-      'set -e;
-       echo "== Running schema migrations ==";
-       for f in /migrations/0*.sql; do
-         [ -e "$f" ] || continue;
-         echo "-> Applying $(basename "$f")";
-         psql -h db -p 5432 -U postgres -d mydatabase \
-              -v ON_ERROR_STOP=1 -X -q -f "$f";
-       done;
-       if [ "$RUN_SEED" = "true" ]; then
-         echo "== Running seed data ==";
-         for f in /migrations/1*.sql; do
-           [ -e "$f" ] || continue;
-           echo "-> Applying $(basename "$f")";
-           psql -h db -p 5432 -U postgres -d mydatabase \
-                -v ON_ERROR_STOP=1 -X -q -f "$f";
-         done;
-       fi;
-       echo "== Migration complete =="'
+      - ./migrations:/migrations:ro
+      - ./scripts:/scripts:ro
+    entrypoint: ["/bin/sh","/scripts/migrate.sh"]
