@@ -35,4 +35,4 @@ services:
     volumes:
       - ./migrations:/migrations:ro
       - ./scripts:/scripts:ro
-    entrypoint: ["/bin/sh","/scripts/migrate.sh"]
+    entrypoint: ["/scripts/migrate.sh"]
